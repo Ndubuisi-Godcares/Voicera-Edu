@@ -5,13 +5,10 @@ import speech_recognition as sr
 from gtts import gTTS
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
-from langchain_cohere import CohereEmbeddings
+import cohere  # Corrected import
 from langchain_community.vectorstores import FAISS
-from langchain_community.llms import Cohere
 from langchain.chains.question_answering import load_qa_chain
 from pydub import AudioSegment
-import Cohere
-
 
 # Load Cohere API key
 cohere_api_key = st.secrets["cohere_api_key"]
@@ -84,9 +81,10 @@ if uploaded_file:
         text_splitter = CharacterTextSplitter(separator="\n", chunk_size=1000, chunk_overlap=200)
         texts = text_splitter.split_text(doc_text)
 
+        # Using the cohere API for embeddings
         embeddings = CohereEmbeddings(cohere_api_key=cohere_api_key, model="embed-english-v3.0")
         docsearch = FAISS.from_texts(texts, embeddings)
-        chain = load_qa_chain(Cohere(cohere_api_key=cohere_api_key, temperature=0.3), chain_type="stuff")
+        chain = load_qa_chain(cohere.Client(cohere_api_key), chain_type="stuff")
     st.success("Document processed successfully!")
 
 # Step 2: Voice or Text Input
