@@ -10,6 +10,10 @@ from langchain_community.vectorstores import FAISS
 from langchain_community.llms import Cohere
 from langchain.chains.question_answering import load_qa_chain
 from pydub import AudioSegment
+from datetime import datetime
+
+# Set page config FIRST
+st.set_page_config(page_title="EduAI Assistant", layout="centered", page_icon="🧑‍🏫")
 
 # Load Cohere API key
 cohere_api_key = st.secrets["cohere_api_key"]
@@ -17,23 +21,40 @@ cohere_api_key = st.secrets["cohere_api_key"]
 # Custom CSS for professional look
 st.markdown("""
 <style>
+    :root {
+        --primary-color: #2563eb;
+        --primary-hover: #1d4ed8;
+        --secondary-color: #f9fafb;
+        --text-color: #1f2937;
+        --light-text: #6b7280;
+        --border-color: #e5e7eb;
+        --user-bubble: #e0e7ff;
+        --bot-bubble: #ffffff;
+        --status-bubble: #f3f4f6;
+    }
+    
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: var(--text-color);
+    }
+    
     .chat-container {
         max-width: 800px;
         margin: 0 auto;
         border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         padding: 20px;
-        background-color: #f9fafb;
+        background-color: var(--secondary-color);
     }
     .chat-header {
-        background-color: #2563eb;
+        background-color: var(--primary-color);
         color: white;
         padding: 15px 20px;
         border-radius: 10px 10px 0 0;
         margin: -20px -20px 20px -20px;
     }
     .user-message {
-        background-color: #e0e7ff;
+        background-color: var(--user-bubble);
         padding: 12px 16px;
         border-radius: 12px 12px 0 12px;
         margin: 8px 0;
@@ -41,7 +62,7 @@ st.markdown("""
         margin-left: auto;
     }
     .bot-message {
-        background-color: white;
+        background-color: var(--bot-bubble);
         padding: 12px 16px;
         border-radius: 12px 12px 12px 0;
         margin: 8px 0;
@@ -49,30 +70,31 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     .status-message {
-        background-color: #f3f4f6;
+        background-color: var(--status-bubble);
         padding: 10px 15px;
         border-radius: 8px;
         margin: 8px 0;
         text-align: center;
         font-size: 0.9em;
-        color: #4b5563;
+        color: var(--light-text);
     }
     .file-uploader {
-        border: 2px dashed #d1d5db;
+        border: 2px dashed var(--border-color);
         border-radius: 8px;
         padding: 20px;
         text-align: center;
         margin-bottom: 20px;
     }
     .stButton>button {
-        background-color: #2563eb;
+        background-color: var(--primary-color);
         color: white;
         border-radius: 8px;
         padding: 8px 16px;
         border: none;
+        transition: background-color 0.2s;
     }
     .stButton>button:hover {
-        background-color: #1d4ed8;
+        background-color: var(--primary-hover);
     }
     .stAudio {
         width: 100%;
@@ -95,9 +117,25 @@ st.markdown("""
     }
     .timestamp {
         font-size: 0.7em;
-        color: #6b7280;
+        color: var(--light-text);
         margin-top: 4px;
         text-align: right;
+    }
+    .input-container {
+        margin-top: 20px;
+        border-top: 1px solid var(--border-color);
+        padding-top: 20px;
+    }
+    .footer {
+        text-align: center;
+        margin-top: 30px;
+        color: var(--light-text);
+        font-size: 0.8em;
+    }
+    .spinner-container {
+        display: flex;
+        justify-content: center;
+        margin: 20px 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -105,8 +143,6 @@ st.markdown("""
 # Initialize session state for chat history
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
-
-st.set_page_config(page_title="EduAI Assistant", layout="centered", page_icon="🧑‍🏫")
 
 # Main container
 with st.container():
@@ -181,13 +217,13 @@ with st.container():
             st.session_state.chat_history.append({
                 'type': 'status',
                 'content': f"📚 Document processed successfully with {len(texts)} sections",
-                'timestamp': "Now"
+                'timestamp': datetime.now().strftime("%H:%M")
             })
             st.rerun()
 
     # Input section
     st.markdown("""
-    <div style="margin-top:20px; border-top:1px solid #e5e7eb; padding-top:20px;">
+    <div class="input-container">
         <h4 style="margin-bottom:10px;">Ask your question</h4>
     </div>
     """, unsafe_allow_html=True)
@@ -215,7 +251,7 @@ with st.container():
                 st.session_state.chat_history.append({
                     'type': 'user',
                     'content': query,
-                    'timestamp': "Now"
+                    'timestamp': datetime.now().strftime("%H:%M")
                 })
                 st.rerun()
             except Exception as e:
@@ -236,7 +272,7 @@ with st.container():
             st.session_state.chat_history.append({
                 'type': 'user',
                 'content': query,
-                'timestamp': "Now"
+                'timestamp': datetime.now().strftime("%H:%M")
             })
             st.rerun()
             
@@ -255,7 +291,7 @@ with st.container():
             st.session_state.chat_history.append({
                 'type': 'bot',
                 'content': answer,
-                'timestamp': "Now"
+                'timestamp': datetime.now().strftime("%H:%M")
             })
             
             # Text-to-Speech
@@ -288,7 +324,7 @@ with st.container():
 
 # Footer
 st.markdown("""
-<div style="text-align:center; margin-top:30px; color:#6b7280; font-size:0.8em;">
+<div class="footer">
     <p>EduAI Assistant v1.0 · Secure AI-powered learning</p>
 </div>
 """, unsafe_allow_html=True)
