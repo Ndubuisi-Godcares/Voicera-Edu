@@ -1,7 +1,9 @@
 import streamlit as st
 import tempfile
 import os
-import speech_recognition as sr
+import sounddevice as sd
+import numpy as np
+import wave
 from gtts import gTTS
 from PyPDF2 import PdfReader
 
@@ -47,13 +49,34 @@ voice_button = st.button("🎤 Ask using Voice")
 
 if voice_button:
     try:
-        recognizer = sr.Recognizer()
-        with sr.Microphone() as source:
-            st.info("Listening... Please speak now.")
-            audio = recognizer.listen(source, phrase_time_limit=5)
+        # Record Audio using sounddevice
+        st.info("Listening... Please speak now.")
+        fs = 16000  # Sampling frequency (16kHz)
+        duration = 5  # seconds
 
+        # Record the audio
+        audio_data = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16')
+        sd.wait()  # Wait until recording is finished
+
+        # Save the recorded audio to a WAV file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as fp:
+            wavefile = wave.open(fp.name, 'wb')
+            wavefile.setnchannels(1)
+            wavefile.setsampwidth(2)  # 16-bit audio
+            wavefile.setframerate(fs)
+            wavefile.writeframes(audio_data.tobytes())
+            audio_path = fp.name
+
+        # Convert audio to text
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(audio_path) as source:
+            audio = recognizer.record(source)
         query = recognizer.recognize_google(audio)
         st.success(f"You asked: {query}")
+
+        # Remove the temporary audio file
+        os.remove(audio_path)
+
     except Exception as e:
         st.warning("Voice input may not work in browser or Streamlit Cloud. Use the text box instead.")
         st.error(str(e))

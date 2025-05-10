@@ -5,4 +5,4 @@ openai
 langchain
 faiss-cpu
 SpeechRecognition
-pyaudio
+sounddevice
