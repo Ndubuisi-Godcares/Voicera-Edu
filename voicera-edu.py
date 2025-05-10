@@ -7,7 +7,7 @@ from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_cohere import CohereEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_community.llms import Cohere  # Keep using community LLM package
+from langchain_community.llms import Cohere
 from langchain.chains.question_answering import load_qa_chain
 from pydub import AudioSegment
 
@@ -40,7 +40,6 @@ if uploaded_file:
         embeddings = CohereEmbeddings(cohere_api_key=cohere_api_key, model="embed-english-v3.0")
         docsearch = FAISS.from_texts(texts, embeddings)
         
-        # Fix: Create Cohere LLM with correct parameters
         llm = Cohere(cohere_api_key=cohere_api_key, temperature=0.3)
         chain = load_qa_chain(llm, chain_type="stuff")
         
@@ -52,15 +51,11 @@ audio_bytes = st.audio_input("🎤 Ask your question by voice")
 
 if audio_bytes is not None:
     try:
-        # Create temp directory if it doesn't exist
         temp_dir = tempfile.mkdtemp()
-        
-        # Save the audio bytes to a temporary file
         temp_audio_path = os.path.join(temp_dir, "input.webm")
         with open(temp_audio_path, "wb") as f:
             f.write(audio_bytes.getvalue())
         
-        # Convert to WAV using pydub
         try:
             audio = AudioSegment.from_file(temp_audio_path)
             wav_path = os.path.join(temp_dir, "input.wav")
@@ -73,9 +68,8 @@ if audio_bytes is not None:
             st.success(f"You asked: {query}")
         except Exception as e:
             st.error(f"Audio conversion failed: {e}")
-            st.info("Make sure ffmpeg is installed in your Streamlit environment. Try adding it to your requirements.txt")
-            
-        # Clean up temp files
+            st.info("Ensure `ffmpeg` is installed in your environment (add to `requirements.txt`)")
+
         for file_path in [temp_audio_path, wav_path]:
             if os.path.exists(file_path):
                 os.remove(file_path)
@@ -89,41 +83,44 @@ query = st.text_input("Or type your question here:", value=query)
 if query and docsearch and chain:
     with st.spinner("Thinking like a teacher..."):
         docs = docsearch.similarity_search(query)
-        try:
-            # Try the new invoke method first
-            answer = chain.invoke({"input_documents": docs, "question": query})
-            if isinstance(answer, dict) and "output_text" in answer:
-                answer = answer["output_text"]
-        except (AttributeError, TypeError):
-            # Fall back to the run method if invoke fails
-            answer = chain.run(input_documents=docs, question=query)
-    
-    st.markdown("**Answer:** " + answer)
-    
-    # Text-to-Speech
-    with st.spinner("Generating audio response..."):
-        tts = gTTS(text=answer, lang='en')
-        audio_path = os.path.join(tempfile.gettempdir(), "answer.mp3")
-        tts.save(audio_path)
-        
-        with open(audio_path, "rb") as audio_file:
-            audio_bytes = audio_file.read()
-            # Auto-play the audio
-            st.audio(audio_bytes, format="audio/mp3", start_time=0)
-            
-            # Add JavaScript to auto-play the audio
-            st.markdown("""
-            <script>
-                document.addEventListener('DOMContentLoaded', (event) => {
-                    const audioElements = document.querySelectorAll('audio');
-                    audioElements.forEach((audio) => {
-                        audio.play();
-                    });
-                });
-            </script>
-            """, unsafe_allow_html=True)
-        
-        os.remove(audio_path)
+
+        if not docs:
+            st.warning("Sorry, I couldn't find relevant information in the document.")
+        else:
+            st.info(f"Found {len(docs)} relevant chunk(s).")
+
+            try:
+                answer = chain.invoke({"input_documents": docs, "question": query})
+                if isinstance(answer, dict) and "output_text" in answer:
+                    answer = answer["output_text"]
+            except (AttributeError, TypeError):
+                answer = chain.run(input_documents=docs, question=query)
+
+            st.markdown("**Answer:** " + answer)
+
+            # Text-to-Speech
+            with st.spinner("Generating audio response..."):
+                tts = gTTS(text=answer, lang='en')
+                audio_path = os.path.join(tempfile.gettempdir(), "answer.mp3")
+                tts.save(audio_path)
+
+                with open(audio_path, "rb") as audio_file:
+                    audio_bytes = audio_file.read()
+                    st.audio(audio_bytes, format="audio/mp3", start_time=0)
+
+                    # Auto-play the audio
+                    st.markdown("""
+                    <script>
+                        document.addEventListener('DOMContentLoaded', (event) => {
+                            const audioElements = document.querySelectorAll('audio');
+                            audioElements.forEach((audio) => {
+                                audio.play();
+                            });
+                        });
+                    </script>
+                    """, unsafe_allow_html=True)
+
+                os.remove(audio_path)
 
 # Animated Avatar
 st.markdown("""
