@@ -7,7 +7,7 @@ from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_cohere import CohereEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_community.llms import Cohere
+from langchain_cohere import Cohere  # Updated import
 from langchain.chains.question_answering import load_qa_chain
 from pydub import AudioSegment
 
@@ -28,17 +28,23 @@ docsearch = None
 chain = None
 
 if uploaded_file:
-    reader = PdfReader(uploaded_file)
-    for page in reader.pages:
-        if page.extract_text():
-            doc_text += page.extract_text().strip() + "\n"
-
-    text_splitter = CharacterTextSplitter(separator="\n", chunk_size=1000, chunk_overlap=200)
-    texts = text_splitter.split_text(doc_text)
-
-    embeddings = CohereEmbeddings(cohere_api_key=cohere_api_key, model="embed-english-v3.0")
-    docsearch = FAISS.from_texts(texts, embeddings)
-    chain = load_qa_chain(Cohere(cohere_api_key=cohere_api_key, temperature=0.3), chain_type="stuff")
+    with st.spinner("Processing PDF..."):
+        reader = PdfReader(uploaded_file)
+        for page in reader.pages:
+            if page.extract_text():
+                doc_text += page.extract_text().strip() + "\n"
+        
+        text_splitter = CharacterTextSplitter(separator="\n", chunk_size=1000, chunk_overlap=200)
+        texts = text_splitter.split_text(doc_text)
+        
+        embeddings = CohereEmbeddings(cohere_api_key=cohere_api_key, model="embed-english-v3.0")
+        docsearch = FAISS.from_texts(texts, embeddings)
+        
+        # Fix: Create Cohere LLM with the updated import
+        llm = Cohere(api_key=cohere_api_key, temperature=0.3)
+        chain = load_qa_chain(llm, chain_type="stuff")
+        
+        st.success(f"PDF processed with {len(texts)} text chunks")
 
 # Step 2: Voice or Text Input
 query = ""
@@ -46,22 +52,34 @@ audio_bytes = st.audio_input("🎤 Ask your question by voice")
 
 if audio_bytes is not None:
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_audio:
-            temp_audio.write(audio_bytes.read())
-            temp_audio_path = temp_audio.name
-
+        # Create temp directory if it doesn't exist
+        temp_dir = tempfile.mkdtemp()
+        
+        # Save the audio bytes to a temporary file
+        temp_audio_path = os.path.join(temp_dir, "input.webm")
+        with open(temp_audio_path, "wb") as f:
+            f.write(audio_bytes.getvalue())
+        
         # Convert to WAV using pydub
-        audio = AudioSegment.from_file(temp_audio_path)
-        wav_path = temp_audio_path.replace(".webm", ".wav")
-        audio.export(wav_path, format="wav")
-
-        recognizer = sr.Recognizer()
-        with sr.AudioFile(wav_path) as source:
-            audio_data = recognizer.record(source)
-        query = recognizer.recognize_google(audio_data)
-        st.success(f"You asked: {query}")
-        os.remove(temp_audio_path)
-        os.remove(wav_path)
+        try:
+            audio = AudioSegment.from_file(temp_audio_path)
+            wav_path = os.path.join(temp_dir, "input.wav")
+            audio.export(wav_path, format="wav")
+            
+            recognizer = sr.Recognizer()
+            with sr.AudioFile(wav_path) as source:
+                audio_data = recognizer.record(source)
+            query = recognizer.recognize_google(audio_data)
+            st.success(f"You asked: {query}")
+        except Exception as e:
+            st.error(f"Audio conversion failed: {e}")
+            st.info("Make sure ffmpeg is installed in your Streamlit environment. Try adding it to your requirements.txt")
+            
+        # Clean up temp files
+        for file_path in [temp_audio_path, wav_path]:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        os.rmdir(temp_dir)
     except Exception as e:
         st.error(f"Voice recognition failed: {e}")
 
@@ -71,20 +89,35 @@ query = st.text_input("Or type your question here:", value=query)
 if query and docsearch and chain:
     with st.spinner("Thinking like a teacher..."):
         docs = docsearch.similarity_search(query)
-        answer = chain.run(input_documents=docs, question=query)
-
+        # Fix: Use invoke instead of run
+        answer = chain.invoke({"input_documents": docs, "question": query})["output_text"]
+    
     st.markdown("**Answer:** " + answer)
-
+    
     # Text-to-Speech
-    tts = gTTS(text=answer, lang='en')
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
-        tts.save(fp.name)
-        audio_path = fp.name
-
-    with open(audio_path, "rb") as audio_file:
-        audio_bytes = audio_file.read()
-        st.audio(audio_bytes, format="audio/mp3")
-    os.remove(audio_path)
+    with st.spinner("Generating audio response..."):
+        tts = gTTS(text=answer, lang='en')
+        audio_path = os.path.join(tempfile.gettempdir(), "answer.mp3")
+        tts.save(audio_path)
+        
+        with open(audio_path, "rb") as audio_file:
+            audio_bytes = audio_file.read()
+            # Auto-play the audio
+            st.audio(audio_bytes, format="audio/mp3", start_time=0)
+            
+            # Add JavaScript to auto-play the audio
+            st.markdown("""
+            <script>
+                document.addEventListener('DOMContentLoaded', (event) => {
+                    const audioElements = document.querySelectorAll('audio');
+                    audioElements.forEach((audio) => {
+                        audio.play();
+                    });
+                });
+            </script>
+            """, unsafe_allow_html=True)
+        
+        os.remove(audio_path)
 
 # Animated Avatar
 st.markdown("""
