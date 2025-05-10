@@ -7,7 +7,7 @@ from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_cohere import CohereEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_cohere import Cohere  # Updated import
+from langchain_community.llms import Cohere  # Keep using community LLM package
 from langchain.chains.question_answering import load_qa_chain
 from pydub import AudioSegment
 
@@ -40,8 +40,8 @@ if uploaded_file:
         embeddings = CohereEmbeddings(cohere_api_key=cohere_api_key, model="embed-english-v3.0")
         docsearch = FAISS.from_texts(texts, embeddings)
         
-        # Fix: Create Cohere LLM with the updated import
-        llm = Cohere(api_key=cohere_api_key, temperature=0.3)
+        # Fix: Create Cohere LLM with correct parameters
+        llm = Cohere(cohere_api_key=cohere_api_key, temperature=0.3)
         chain = load_qa_chain(llm, chain_type="stuff")
         
         st.success(f"PDF processed with {len(texts)} text chunks")
@@ -89,8 +89,14 @@ query = st.text_input("Or type your question here:", value=query)
 if query and docsearch and chain:
     with st.spinner("Thinking like a teacher..."):
         docs = docsearch.similarity_search(query)
-        # Fix: Use invoke instead of run
-        answer = chain.invoke({"input_documents": docs, "question": query})["output_text"]
+        try:
+            # Try the new invoke method first
+            answer = chain.invoke({"input_documents": docs, "question": query})
+            if isinstance(answer, dict) and "output_text" in answer:
+                answer = answer["output_text"]
+        except (AttributeError, TypeError):
+            # Fall back to the run method if invoke fails
+            answer = chain.run(input_documents=docs, question=query)
     
     st.markdown("**Answer:** " + answer)
     
