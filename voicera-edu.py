@@ -1,8 +1,6 @@
 import streamlit as st
 import tempfile
 import os
-import sounddevice as sd
-import numpy as np
 import wave
 import speech_recognition as sr
 from gtts import gTTS
@@ -43,37 +41,23 @@ if uploaded_file:
     docsearch = FAISS.from_texts(texts, embeddings)
     chain = load_qa_chain(Cohere(cohere_api_key=cohere_api_key, temperature=0.3), chain_type="stuff")
 
-# Step 2: Voice or Text Input
+# Step 2: Voice or Text Input (using Google API for Speech Recognition)
 query = ""
 voice_button = st.button("🎤 Ask using Voice")
 
 if voice_button:
     try:
-        # Record Audio using sounddevice
-        st.info("Listening... Please speak now.")
-        fs = 16000  # Sampling frequency
-        duration = 5  # seconds
-
-        # Record the audio
-        audio_data = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16')
-        sd.wait()
-
-        # Save to WAV file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as fp:
-            wavefile = wave.open(fp.name, 'wb')
-            wavefile.setnchannels(1)
-            wavefile.setsampwidth(2)
-            wavefile.setframerate(fs)
-            wavefile.writeframes(audio_data.tobytes())
-            audio_path = fp.name
-
-        recognizer = sr.Recognizer()
-        with sr.AudioFile(audio_path) as source:
-            audio = recognizer.record(source)
-        query = recognizer.recognize_google(audio)
-        st.success(f"You asked: {query}")
-        os.remove(audio_path)
-
+        # Check if it's local or Streamlit Cloud
+        if "microphone" in st.secrets:
+            # Local development: Record audio from the microphone
+            recognizer = sr.Recognizer()
+            with sr.Microphone() as source:
+                st.info("Listening... Please speak now.")
+                audio = recognizer.listen(source)
+            query = recognizer.recognize_google(audio)
+            st.success(f"You asked: {query}")
+        else:
+            st.warning("Voice input may not work in Streamlit Cloud. Use the text box instead.")
     except Exception as e:
         st.warning("Voice input may not work in browser or Streamlit Cloud. Use the text box instead.")
         st.error(str(e))
