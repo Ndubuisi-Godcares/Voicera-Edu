@@ -1,7 +1,6 @@
 import streamlit as st
 import tempfile
 import os
-import wave
 import speech_recognition as sr
 from gtts import gTTS
 from PyPDF2 import PdfReader
@@ -41,26 +40,24 @@ if uploaded_file:
     docsearch = FAISS.from_texts(texts, embeddings)
     chain = load_qa_chain(Cohere(cohere_api_key=cohere_api_key, temperature=0.3), chain_type="stuff")
 
-# Step 2: Voice or Text Input (using Google API for Speech Recognition)
+# Step 2: Voice or Text Input (Streamlit-compatible audio input)
 query = ""
-voice_button = st.button("🎤 Ask using Voice")
+audio_bytes = st.audio_input("🎤 Ask your question by voice")
 
-if voice_button:
+if audio_bytes is not None:
     try:
-        # Check if it's local or Streamlit Cloud
-        if "microphone" in st.secrets:
-            # Local development: Record audio from the microphone
-            recognizer = sr.Recognizer()
-            with sr.Microphone() as source:
-                st.info("Listening... Please speak now.")
-                audio = recognizer.listen(source)
-            query = recognizer.recognize_google(audio)
-            st.success(f"You asked: {query}")
-        else:
-            st.warning("Voice input may not work in Streamlit Cloud. Use the text box instead.")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
+            temp_audio.write(audio_bytes.read())
+            temp_audio_path = temp_audio.name
+
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(temp_audio_path) as source:
+            audio = recognizer.record(source)
+        query = recognizer.recognize_google(audio)
+        st.success(f"You asked: {query}")
+        os.remove(temp_audio_path)
     except Exception as e:
-        st.warning("Voice input may not work in browser or Streamlit Cloud. Use the text box instead.")
-        st.error(str(e))
+        st.error(f"Voice recognition failed: {e}")
 
 query = st.text_input("Or type your question here:", value=query)
 
@@ -78,9 +75,9 @@ if query and docsearch and chain:
         tts.save(fp.name)
         audio_path = fp.name
 
-    audio_file = open(audio_path, "rb")
-    audio_bytes = audio_file.read()
-    st.audio(audio_bytes, format="audio/mp3")
+    with open(audio_path, "rb") as audio_file:
+        audio_bytes = audio_file.read()
+        st.audio(audio_bytes, format="audio/mp3")
     os.remove(audio_path)
 
 # Animated Avatar
