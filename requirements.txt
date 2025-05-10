@@ -8,3 +8,4 @@ SpeechRecognition
 langchain-community
 cohere
 SpeechRecognition
+langchain_cohere
