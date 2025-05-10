@@ -9,11 +9,11 @@ from langchain_cohere import CohereEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_community.llms import Cohere
 from langchain.chains.question_answering import load_qa_chain
+from pydub import AudioSegment
 
-# Load Cohere API key from Streamlit secrets
+# Load Cohere API key
 cohere_api_key = st.secrets["cohere_api_key"]
 
-# Streamlit page config
 st.set_page_config(page_title="AI Teacher Voice Assistant", layout="centered")
 st.title("🧑‍🏫 AI Teacher Voice Assistant")
 
@@ -40,22 +40,28 @@ if uploaded_file:
     docsearch = FAISS.from_texts(texts, embeddings)
     chain = load_qa_chain(Cohere(cohere_api_key=cohere_api_key, temperature=0.3), chain_type="stuff")
 
-# Step 2: Voice or Text Input (Streamlit-compatible audio input)
+# Step 2: Voice or Text Input
 query = ""
 audio_bytes = st.audio_input("🎤 Ask your question by voice")
 
 if audio_bytes is not None:
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_audio:
             temp_audio.write(audio_bytes.read())
             temp_audio_path = temp_audio.name
 
+        # Convert to WAV using pydub
+        audio = AudioSegment.from_file(temp_audio_path)
+        wav_path = temp_audio_path.replace(".webm", ".wav")
+        audio.export(wav_path, format="wav")
+
         recognizer = sr.Recognizer()
-        with sr.AudioFile(temp_audio_path) as source:
-            audio = recognizer.record(source)
-        query = recognizer.recognize_google(audio)
+        with sr.AudioFile(wav_path) as source:
+            audio_data = recognizer.record(source)
+        query = recognizer.recognize_google(audio_data)
         st.success(f"You asked: {query}")
         os.remove(temp_audio_path)
+        os.remove(wav_path)
     except Exception as e:
         st.error(f"Voice recognition failed: {e}")
 
@@ -87,7 +93,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Lottie script loader
 st.markdown("""
 <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 """, unsafe_allow_html=True)
