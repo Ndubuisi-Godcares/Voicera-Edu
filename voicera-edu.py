@@ -9,6 +9,7 @@ import cohere  # Corrected import
 from langchain_community.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
 from pydub import AudioSegment
+from langchain_cohere import CohereEmbeddings
 
 # Load Cohere API key
 cohere_api_key = st.secrets["cohere_api_key"]
