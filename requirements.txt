@@ -7,7 +7,7 @@ faiss-cpu
 SpeechRecognition
 langchain-community
 cohere
-SpeechRecognition
 langchain_cohere
 pydub
 ffmpeg
+ffmpeg-python
