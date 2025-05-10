@@ -6,3 +6,5 @@ langchain
 faiss-cpu
 SpeechRecognition
 sounddevice
+langchain-community
+cohere

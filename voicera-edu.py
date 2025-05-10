@@ -4,17 +4,17 @@ import os
 import sounddevice as sd
 import numpy as np
 import wave
+import speech_recognition as sr
 from gtts import gTTS
 from PyPDF2 import PdfReader
-
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
+from langchain_cohere import CohereEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_community.llms import Cohere
 from langchain.chains.question_answering import load_qa_chain
-from langchain.llms import OpenAI
 
-# Load OpenAI API key from Streamlit secrets
-openai_api_key = os.getenv("OPENAI_API_KEY")
+# Load Cohere API key from Streamlit secrets
+cohere_api_key = st.secrets["cohere_api_key"]
 
 # Streamlit page config
 st.set_page_config(page_title="AI Teacher Voice Assistant", layout="centered")
@@ -39,9 +39,9 @@ if uploaded_file:
     text_splitter = CharacterTextSplitter(separator="\n", chunk_size=1000, chunk_overlap=200)
     texts = text_splitter.split_text(doc_text)
 
-    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+    embeddings = CohereEmbeddings(cohere_api_key=cohere_api_key, model="embed-english-v3.0")
     docsearch = FAISS.from_texts(texts, embeddings)
-    chain = load_qa_chain(OpenAI(temperature=0, openai_api_key=openai_api_key), chain_type="stuff")
+    chain = load_qa_chain(Cohere(cohere_api_key=cohere_api_key, temperature=0.3), chain_type="stuff")
 
 # Step 2: Voice or Text Input
 query = ""
@@ -51,30 +51,27 @@ if voice_button:
     try:
         # Record Audio using sounddevice
         st.info("Listening... Please speak now.")
-        fs = 16000  # Sampling frequency (16kHz)
+        fs = 16000  # Sampling frequency
         duration = 5  # seconds
 
         # Record the audio
         audio_data = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16')
-        sd.wait()  # Wait until recording is finished
+        sd.wait()
 
-        # Save the recorded audio to a WAV file
+        # Save to WAV file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as fp:
             wavefile = wave.open(fp.name, 'wb')
             wavefile.setnchannels(1)
-            wavefile.setsampwidth(2)  # 16-bit audio
+            wavefile.setsampwidth(2)
             wavefile.setframerate(fs)
             wavefile.writeframes(audio_data.tobytes())
             audio_path = fp.name
 
-        # Convert audio to text
         recognizer = sr.Recognizer()
         with sr.AudioFile(audio_path) as source:
             audio = recognizer.record(source)
         query = recognizer.recognize_google(audio)
         st.success(f"You asked: {query}")
-
-        # Remove the temporary audio file
         os.remove(audio_path)
 
     except Exception as e:
@@ -109,7 +106,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Load Lottie Script
+# Lottie script loader
 st.markdown("""
 <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 """, unsafe_allow_html=True)
