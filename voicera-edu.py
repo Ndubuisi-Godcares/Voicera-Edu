@@ -17,7 +17,7 @@ cohere_api_key = st.secrets["cohere_api_key"]
 
 # Set page config (must be first Streamlit command)
 st.set_page_config(
-    page_title="AI Teacher Assistant",
+    page_title="Voicera - Conversational AI for Education",
     page_icon="🧑‍🏫",
     layout="centered"
 )
@@ -98,7 +98,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # App header
-st.title("🎓 AI Teacher Chat Assistant")
+st.title("🎓 Voicera - Conversational AI for Education")
 st.markdown("Upload a textbook or syllabus (PDF), then ask a question by **voice** or **text** to get an instant spoken response.")
 
 # Session state initialization
@@ -148,7 +148,7 @@ with st.sidebar:
     if uploaded_file:
         with st.expander("📋 Document Summary", expanded=True):
             st.markdown(f"""
-            <div style="color: #000000;">
+            <div style="color: #FFFFFF;">
                 <p><strong>File Name:</strong> {uploaded_file.name}</p>
                 <p><strong>Size:</strong> {uploaded_file.size/1024:.1f} KB</p>
                 <p><strong>Sections:</strong> {len(texts) if 'texts' in locals() else 0}</p>
