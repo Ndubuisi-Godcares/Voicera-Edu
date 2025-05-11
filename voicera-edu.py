@@ -35,25 +35,23 @@ st.markdown("""
         --card-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
     }
     
-    .upload-card {
+    .upload-container {
         border: 2px dashed var(--border);
         border-radius: 12px;
-        padding: 2rem;
+        padding: 1.5rem;
         margin: 1rem 0;
         text-align: center;
         background: var(--secondary);
-        transition: all 0.3s;
     }
     
-    .chat-message {
-        padding: 12px 16px;
-        border-radius: 8px;
-        margin: 8px 0;
-        line-height: 1.5;
+    .message-container {
+        display: flex;
+        margin-bottom: 12px;
     }
     
     .user-message {
         background-color: #e0e7ff;
+        padding: 10px 14px;
         border-radius: 12px 12px 0 12px;
         margin-left: auto;
         max-width: 80%;
@@ -61,6 +59,7 @@ st.markdown("""
     
     .bot-message {
         background-color: white;
+        padding: 10px 14px;
         border-radius: 12px 12px 12px 0;
         box-shadow: var(--card-shadow);
         max-width: 80%;
@@ -72,11 +71,20 @@ st.markdown("""
         margin-top: 4px;
     }
     
-    .summary-card {
-        background: #f8f9fa;
-        padding: 1rem;
+    .document-content {
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 10px;
+        background: white;
         border-radius: 8px;
-        margin: 0.5rem 0;
+        border: 1px solid var(--border);
+        margin-top: 10px;
+        white-space: pre-wrap;
+        font-family: monospace;
+    }
+    
+    .sidebar-section {
+        margin-bottom: 1.5rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -98,7 +106,6 @@ with st.container():
 
 # Document processing
 doc_text, docsearch, chain = "", None, None
-full_summary = ""
 
 if uploaded_file:
     with st.spinner("Analyzing document..."):
@@ -120,22 +127,36 @@ if uploaded_file:
             llm = Cohere(cohere_api_key=cohere_api_key, temperature=0.3)
             chain = load_qa_chain(llm, chain_type="stuff")
             
-            # Create document summary
-            full_summary = f"""
-            ### 📚 Document Summary
-            **File Name:** {uploaded_file.name}  
-            **Size:** {uploaded_file.size/1024:.1f} KB  
-            **Content Chunks:** {len(texts)}  
-            
-            #### Key Content Preview:
-            {doc_text[:500]}{'...' if len(doc_text) > 500 else ''}
-            """
-            
             st.session_state.document_processed = True
             st.success(f"Document processed successfully ({len(texts)} sections)")
             
         except Exception as e:
             st.error(f"Error processing document: {str(e)}")
+
+# Document tools sidebar
+with st.sidebar:
+    st.header("Document Tools")
+    
+    if uploaded_file:
+        with st.expander("📋 Document Summary", expanded=True):
+            st.markdown(f"""
+            **File Name:** {uploaded_file.name}  
+            **Size:** {uploaded_file.size/1024:.1f} KB  
+            **Sections:** {len(texts) if 'texts' in locals() else 0}
+            """)
+            
+            st.markdown("**Document Content:**")
+            st.markdown(f'<div class="document-content">{doc_text}</div>', unsafe_allow_html=True)
+            
+            st.download_button(
+                "📥 Download Full Text",
+                data=doc_text,
+                file_name=f"{uploaded_file.name}_content.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
+    else:
+        st.info("Upload a document to access tools")
 
 # Question input section
 st.subheader("💬 Ask Your Question")
@@ -228,9 +249,9 @@ else:
     for message in reversed(st.session_state.chat_history):
         if message['type'] == 'user':
             st.markdown(f"""
-            <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+            <div class="message-container" style="justify-content: flex-end;">
                 <div style="max-width: 80%;">
-                    <div class="chat-message user-message">
+                    <div class="user-message">
                         {message['content']}
                     </div>
                     <div class="timestamp" style="text-align: right;">
@@ -241,9 +262,9 @@ else:
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
-            <div style="display: flex; justify-content: flex-start; margin-bottom: 8px;">
+            <div class="message-container" style="justify-content: flex-start;">
                 <div style="max-width: 80%;">
-                    <div class="chat-message bot-message">
+                    <div class="bot-message">
                         {message['content']}
                     </div>
                     <div class="timestamp">
@@ -253,36 +274,6 @@ else:
             </div>
             """, unsafe_allow_html=True)
 
-# Document summary sidebar
-with st.sidebar:
-    st.header("Document Tools")
-    
-    if uploaded_file:
-        with st.expander("📋 Document Summary", expanded=True):
-            st.markdown(f"""
-            <div class="summary-card">
-                <h4 style="margin-top: 0;">{uploaded_file.name}</h4>
-                <p><strong>Size:</strong> {uploaded_file.size/1024:.1f} KB</p>
-                <p><strong>Sections:</strong> {len(texts) if 'texts' in locals() else 0}</p>
-                <hr style="margin: 10px 0;">
-                <h5>Content Preview:</h5>
-                <div style="max-height: 200px; overflow-y: auto; padding: 8px; background: white; border-radius: 4px;">
-                    {doc_text[:500]}{'...' if len(doc_text) > 500 else ''}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if st.button("📥 Download Summary"):
-                summary_text = f"Document: {uploaded_file.name}\n\nSummary:\n{doc_text[:2000]}"
-                st.download_button(
-                    label="Download",
-                    data=summary_text,
-                    file_name=f"{uploaded_file.name}_summary.txt",
-                    mime="text/plain"
-                )
-    else:
-        st.info("Upload a document to access summary tools")
-
 # Footer
 st.markdown("---")
-st.caption("AI Teacher Assistant v1.0 · Secure AI-powered learning")
+st.caption(f"AI Teacher Assistant v1.0 · {datetime.now().strftime('%H:%M')} · Secure AI-powered learning")
