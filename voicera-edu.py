@@ -17,9 +17,7 @@ cohere_api_key = st.secrets["cohere_api_key"]
 st.set_page_config(page_title="AI Teacher Assistant", layout="centered")
 st.title("🎓 AI Teacher Chat Assistant")
 
-st.markdown("""
-Upload a textbook or syllabus (PDF), then ask a question by **voice** or **text** to get an instant spoken response.
-""")
+st.markdown("""Upload a textbook or syllabus (PDF), then ask a question by **voice** or **text** to get an instant spoken response.""")
 
 # Session state for chat history
 if "chat_history" not in st.session_state:
@@ -28,6 +26,7 @@ if "chat_history" not in st.session_state:
 # Step 1: Upload PDF
 uploaded_file = st.file_uploader("📄 Upload a syllabus or textbook (PDF)", type=["pdf"])
 doc_text, docsearch, chain = "", None, None
+full_summary = ""  # Variable for full summary
 
 if uploaded_file:
     with st.spinner("Processing PDF..."):
@@ -45,6 +44,9 @@ if uploaded_file:
 
         llm = Cohere(cohere_api_key=cohere_api_key, temperature=0.3)
         chain = load_qa_chain(llm, chain_type="stuff")
+
+        # Create a full summary of the document (first 1000 characters)
+        full_summary = doc_text[:1000]  # Just an example, you can process it further
 
         st.success(f"✅ PDF processed into {len(texts)} chunks.")
 
@@ -119,6 +121,11 @@ for i, (q, a) in enumerate(reversed(st.session_state.chat_history), 1):
             st.audio(af.read(), format="audio/mp3")
         os.remove(audio_path)
 
+# Step 4: Show Summary on Button Click
+with st.sidebar:
+    if st.button("📘 Show Document Summary"):
+        st.expander("📘 Full Summary of Uploaded Document", expanded=True).markdown(full_summary)
+
 # Animated Avatar
 st.markdown("""
 <div style='text-align: center;'>
@@ -126,73 +133,5 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 st.markdown("<script src='https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js'></script>", unsafe_allow_html=True)
-
-# Summary Text
-summary_text = """
-This AI Teacher Assistant allows users to upload a syllabus or textbook (PDF), then ask questions by voice or text. 
-It uses vector embeddings to find relevant answers from the document and provides both text and spoken responses.
-"""
-
-# Floating Summary Button
-st.markdown(f"""
-<style>
-    #summary-button {{
-        position: fixed;
-        bottom: 20px;
-        left: 20px;
-        background-color: #1f77b4;
-        color: white;
-        border: none;
-        border-radius: 30px;
-        padding: 10px 20px;
-        font-size: 16px;
-        cursor: pointer;
-        z-index: 1000;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-    }}
-
-    #summary-popup {{
-        display: none;
-        position: fixed;
-        bottom: 70px;
-        left: 20px;
-        width: 300px;
-        background-color: #f9f9f9;
-        border: 1px solid #ccc;
-        border-radius: 10px;
-        padding: 15px;
-        box-shadow: 0px 4px 8px rgba(0,0,0,0.2);
-        z-index: 1001;
-        font-size: 14px;
-    }}
-
-    #close-summary {{
-        float: right;
-        cursor: pointer;
-        font-weight: bold;
-        color: #999;
-    }}
-</style>
-
-<button id="summary-button">📘 Summary</button>
-<div id="summary-popup">
-    <span id="close-summary">&times;</span>
-    <p>{summary_text}</p>
-</div>
-
-<script>
-    const btn = document.getElementById("summary-button");
-    const popup = document.getElementById("summary-popup");
-    const close = document.getElementById("close-summary");
-
-    btn.onclick = function() {{
-        popup.style.display = (popup.style.display === "none" || popup.style.display === "") ? "block" : "none";
-    }}
-
-    close.onclick = function() {{
-        popup.style.display = "none";
-    }}
-</script>
-""", unsafe_allow_html=True)
 
 st.caption("Made with ❤️ for better learning experiences.")
