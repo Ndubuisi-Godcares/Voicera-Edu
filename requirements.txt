@@ -9,3 +9,4 @@ SpeechRecognition
 cohere
 pydub
 ffmpeg-python
+scikit-learn
