@@ -22,7 +22,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# Custom CSS for professional styling
+# Custom CSS for professional styling with black text
 st.markdown("""
 <style>
     :root {
@@ -55,6 +55,7 @@ st.markdown("""
         border-radius: 12px 12px 0 12px;
         margin-left: auto;
         max-width: 80%;
+        color: #000000;  /* Black text */
     }
     
     .bot-message {
@@ -63,6 +64,7 @@ st.markdown("""
         border-radius: 12px 12px 12px 0;
         box-shadow: var(--card-shadow);
         max-width: 80%;
+        color: #000000;  /* Black text */
     }
     
     .timestamp {
@@ -81,10 +83,16 @@ st.markdown("""
         margin-top: 10px;
         white-space: pre-wrap;
         font-family: monospace;
+        color: #000000 !important;  /* Force black text */
     }
     
     .sidebar-section {
         margin-bottom: 1.5rem;
+    }
+    
+    /* Force black text in all text elements */
+    .stMarkdown, .stText, .stTextInput, .stTextArea {
+        color: #000000 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -133,17 +141,19 @@ if uploaded_file:
         except Exception as e:
             st.error(f"Error processing document: {str(e)}")
 
-# Document tools sidebar
+# Document tools sidebar with black text
 with st.sidebar:
     st.header("Document Tools")
     
     if uploaded_file:
         with st.expander("📋 Document Summary", expanded=True):
             st.markdown(f"""
-            **File Name:** {uploaded_file.name}  
-            **Size:** {uploaded_file.size/1024:.1f} KB  
-            **Sections:** {len(texts) if 'texts' in locals() else 0}
-            """)
+            <div style="color: #000000;">
+                <p><strong>File Name:</strong> {uploaded_file.name}</p>
+                <p><strong>Size:</strong> {uploaded_file.size/1024:.1f} KB</p>
+                <p><strong>Sections:</strong> {len(texts) if 'texts' in locals() else 0}</p>
+            </div>
+            """, unsafe_allow_html=True)
             
             st.markdown("**Document Content:**")
             st.markdown(f'<div class="document-content">{doc_text}</div>', unsafe_allow_html=True)
@@ -240,7 +250,7 @@ if query and docsearch and chain:
         except Exception as e:
             st.error(f"Error generating answer: {str(e)}")
 
-# Display chat history
+# Display chat history with black text
 st.subheader("📜 Chat History")
 
 if not st.session_state.chat_history:
