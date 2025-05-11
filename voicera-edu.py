@@ -127,4 +127,72 @@ st.markdown("""
 """, unsafe_allow_html=True)
 st.markdown("<script src='https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js'></script>", unsafe_allow_html=True)
 
+# Summary Text
+summary_text = """
+This AI Teacher Assistant allows users to upload a syllabus or textbook (PDF), then ask questions by voice or text. 
+It uses vector embeddings to find relevant answers from the document and provides both text and spoken responses.
+"""
+
+# Floating Summary Button
+st.markdown(f"""
+<style>
+    #summary-button {{
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        background-color: #1f77b4;
+        color: white;
+        border: none;
+        border-radius: 30px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        z-index: 1000;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    }}
+
+    #summary-popup {{
+        display: none;
+        position: fixed;
+        bottom: 70px;
+        left: 20px;
+        width: 300px;
+        background-color: #f9f9f9;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0px 4px 8px rgba(0,0,0,0.2);
+        z-index: 1001;
+        font-size: 14px;
+    }}
+
+    #close-summary {{
+        float: right;
+        cursor: pointer;
+        font-weight: bold;
+        color: #999;
+    }}
+</style>
+
+<button id="summary-button">📘 Summary</button>
+<div id="summary-popup">
+    <span id="close-summary">&times;</span>
+    <p>{summary_text}</p>
+</div>
+
+<script>
+    const btn = document.getElementById("summary-button");
+    const popup = document.getElementById("summary-popup");
+    const close = document.getElementById("close-summary");
+
+    btn.onclick = function() {{
+        popup.style.display = (popup.style.display === "none" || popup.style.display === "") ? "block" : "none";
+    }}
+
+    close.onclick = function() {{
+        popup.style.display = "none";
+    }}
+</script>
+""", unsafe_allow_html=True)
+
 st.caption("Made with ❤️ for better learning experiences.")
