@@ -99,7 +99,10 @@ st.markdown("""
 
 # App header
 st.title("🎓 Voicera - Conversational AI for Education")
-st.markdown("Upload a textbook or syllabus (PDF), then ask a question by **voice** or **text** to get an instant spoken response.")
+st.markdown(
+    '<p style="color: #FFFFFF;">Upload a textbook or syllabus (PDF), then ask a question by <strong>voice</strong> or <strong>text</strong> to get an instant spoken response.</p>',
+    unsafe_allow_html=True
+)
 
 # Session state initialization
 if "chat_history" not in st.session_state:
