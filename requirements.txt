@@ -1,13 +1,11 @@
 streamlit
 gtts
 PyPDF2
-openai
 langchain
+langchain-community
+langchain-cohere
 faiss-cpu
 SpeechRecognition
-langchain-community
 cohere
-langchain_cohere
 pydub
-ffmpeg
 ffmpeg-python
