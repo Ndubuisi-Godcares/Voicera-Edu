@@ -177,7 +177,13 @@ if query and st.session_state.document_processed:
             audio_path = os.path.join(tempfile.gettempdir(), "response.mp3")
             tts.save(audio_path)
             with open(audio_path, "rb") as audio_file:
-                st.audio(audio_file.read(), format="audio/mp3")
+                audio_base64 = audio_file.read().encode("base64")
+                components.html(f"""
+                    <audio autoplay>
+                        <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
+                        Your browser does not support the audio element.
+                    </audio>
+                """)
             os.remove(audio_path)
         except Exception as e:
             st.error(f"Response error: {str(e)}")
