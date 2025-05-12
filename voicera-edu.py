@@ -54,7 +54,7 @@ st.markdown("""
     .bot-bubble {
         background-color: #ffffff;
         border: 1px solid #e5e7eb;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        box-shadow: 0px 1px 4px rgba(0,0,0,0.1);
         border-bottom-left-radius: 0;
     }
     .timestamp {
@@ -73,6 +73,14 @@ st.markdown("""
         white-space: pre-wrap;
         color: #111827;
     }
+    .card {
+        background-color: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        margin: 15px 0;
+        padding: 20px;
+        font-size: 1rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -86,9 +94,8 @@ if "chat_history" not in st.session_state:
 if "document_processed" not in st.session_state:
     st.session_state.document_processed = False
 
-# Upload section
-with st.container():
-    st.subheader("📄 Upload Learning Materials")
+# Upload section (Collapsing section)
+with st.expander("📄 Upload Learning Materials"):
     uploaded_file = st.file_uploader("Choose a PDF file", type=["pdf"])
 
 # Document processing
@@ -113,7 +120,7 @@ if uploaded_file:
         except Exception as e:
             st.error(f"Failed to process: {str(e)}")
 
-# Sidebar document tools
+# Sidebar document tools (Card layout)
 with st.sidebar:
     st.header("📁 Document Tools")
     if uploaded_file:
@@ -126,34 +133,34 @@ with st.sidebar:
     else:
         st.info("Upload a document to enable tools")
 
-# Input
-st.subheader("💬 Ask Your Question")
-query = ""
+# Input (Collapsing section)
+with st.expander("💬 Ask Your Question"):
+    query = ""
 
-# Voice input
-audio_bytes = st.audio_input("Speak your question:")
-if audio_bytes:
-    try:
-        temp_dir = tempfile.mkdtemp()
-        webm_path = os.path.join(temp_dir, "input.webm")
-        with open(webm_path, "wb") as f:
-            f.write(audio_bytes.getvalue())
-        audio = AudioSegment.from_file(webm_path)
-        wav_path = os.path.join(temp_dir, "input.wav")
-        audio.export(wav_path, format="wav")
-        recognizer = sr.Recognizer()
-        with sr.AudioFile(wav_path) as source:
-            audio_data = recognizer.record(source)
-        query = recognizer.recognize_google(audio_data)
-        st.session_state.chat_history.append({"type": "user", "content": query, "timestamp": datetime.now().strftime("%H:%M")})
-        os.remove(webm_path)
-        os.remove(wav_path)
-        os.rmdir(temp_dir)
-    except Exception as e:
-        st.error(f"Speech recognition failed: {str(e)}")
+    # Voice input
+    audio_bytes = st.audio_input("Speak your question:")
+    if audio_bytes:
+        try:
+            temp_dir = tempfile.mkdtemp()
+            webm_path = os.path.join(temp_dir, "input.webm")
+            with open(webm_path, "wb") as f:
+                f.write(audio_bytes.getvalue())
+            audio = AudioSegment.from_file(webm_path)
+            wav_path = os.path.join(temp_dir, "input.wav")
+            audio.export(wav_path, format="wav")
+            recognizer = sr.Recognizer()
+            with sr.AudioFile(wav_path) as source:
+                audio_data = recognizer.record(source)
+            query = recognizer.recognize_google(audio_data)
+            st.session_state.chat_history.append({"type": "user", "content": query, "timestamp": datetime.now().strftime("%H:%M")})
+            os.remove(webm_path)
+            os.remove(wav_path)
+            os.rmdir(temp_dir)
+        except Exception as e:
+            st.error(f"Speech recognition failed: {str(e)}")
 
-# Text input
-query = st.text_input("Or type your question:", value=query)
+    # Text input
+    query = st.text_input("Or type your question:", value=query)
 
 # Answering
 if query and st.session_state.document_processed:
