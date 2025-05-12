@@ -286,6 +286,53 @@ else:
                 </div>
             </div>
             """, unsafe_allow_html=True)
+# Popup Summary Modal
+import streamlit.components.v1 as components
+
+# Generate summary from chat history
+def generate_summary(chat_history):
+    if not chat_history:
+        return "No conversation available to summarize."
+    summary = ""
+    for msg in chat_history:
+        prefix = "User" if msg['type'] == 'user' else "Assistant"
+        summary += f"{prefix} ({msg['timestamp']}): {msg['content']}\n"
+    return summary.strip()
+
+# Add summary button and modal container
+with st.container():
+    if st.button("📌 Summarize Chat Interaction", use_container_width=True):
+        chat_summary = generate_summary(st.session_state.chat_history)
+        st.session_state.show_summary_popup = True
+        st.session_state.chat_summary = chat_summary
+
+# Render popup modal if triggered
+if st.session_state.get("show_summary_popup", False):
+    components.html(f"""
+    <div id="popup-summary" style="
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 350px;
+        max-height: 300px;
+        background-color: white;
+        border: 2px solid #ccc;
+        border-radius: 12px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        z-index: 9999;
+        padding: 1rem;
+        overflow-y: auto;
+        font-family: sans-serif;
+        color: black;
+    ">
+        <h4 style="margin-top: 0;">🧠 Chat Summary</h4>
+        <pre style="white-space: pre-wrap; font-size: 13px;">{st.session_state.chat_summary}</pre>
+        <button onclick="document.getElementById('popup-summary').style.display='none'"
+            style="margin-top: 10px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;">
+            Close
+        </button>
+    </div>
+    """, height=350)
 
 # Footer
 st.markdown("---")
