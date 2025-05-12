@@ -156,6 +156,10 @@ if audio_bytes:
 query = st.text_input("Or type your question:", value=query)
 
 # Answering
+def generate_learning_path(query, doc_text):
+    # This is a simple placeholder. You can implement a more complex logic for path generation.
+    return "Study Chapter 2 -> Practice with examples -> Review Chapter 5"
+
 if query and st.session_state.document_processed:
     if not any(m['content'] == query for m in st.session_state.chat_history if m['type'] == 'user'):
         st.session_state.chat_history.append({"type": "user", "content": query, "timestamp": datetime.now().strftime("%H:%M")})
@@ -164,7 +168,13 @@ if query and st.session_state.document_processed:
             docs = docsearch.similarity_search(query)
             result = chain.invoke({"input_documents": docs, "question": query})
             answer = result.get("output_text", "I couldn't find a good answer.")
+            
+            # Add a personalized learning path suggestion
+            learning_path = generate_learning_path(query, doc_text)
+            st.session_state.chat_history.append({"type": "bot", "content": f"Based on your question, here's a suggested learning path: {learning_path}", "timestamp": datetime.now().strftime("%H:%M")})
+
             st.session_state.chat_history.append({"type": "bot", "content": answer, "timestamp": datetime.now().strftime("%H:%M")})
+
             tts = gTTS(text=answer, lang='en')
             audio_path = os.path.join(tempfile.gettempdir(), "response.mp3")
             tts.save(audio_path)
