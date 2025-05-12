@@ -12,6 +12,7 @@ from langchain.chains.question_answering import load_qa_chain
 from pydub import AudioSegment
 from datetime import datetime
 import streamlit.components.v1 as components
+import base64
 
 # Load Cohere API key
 cohere_api_key = st.secrets["cohere_api_key"]
@@ -129,7 +130,7 @@ with st.sidebar:
         st.write(f"**Sections:** {len(texts) if 'texts' in locals() else 0}")
         st.markdown("**Content Preview:**")
         st.markdown(f'<div class="document-content">{doc_text}</div>', unsafe_allow_html=True)
-        st.download_button("📥 Download Text", doc_text, f"{uploaded_file.name}_content.txt")
+        st.download_button("📅 Download Text", doc_text, f"{uploaded_file.name}_content.txt")
     else:
         st.info("Upload a document to enable tools")
 
@@ -177,13 +178,15 @@ if query and st.session_state.document_processed:
             audio_path = os.path.join(tempfile.gettempdir(), "response.mp3")
             tts.save(audio_path)
             with open(audio_path, "rb") as audio_file:
-                audio_base64 = audio_file.read().encode("base64")
-                components.html(f"""
-                    <audio autoplay>
+                audio_bytes = audio_file.read()
+                audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
+                audio_html = f"""
+                    <audio autoplay controls style="width: 100%;">
                         <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
                         Your browser does not support the audio element.
                     </audio>
-                """)
+                """
+                st.markdown(audio_html, unsafe_allow_html=True)
             os.remove(audio_path)
         except Exception as e:
             st.error(f"Response error: {str(e)}")
