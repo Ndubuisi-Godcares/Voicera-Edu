@@ -77,7 +77,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # App Header
-st.title("🎓 Voicera - Conversational AI for Education")
+st.title("🤖 Voicera - Conversational AI for Education")
 st.caption("Upload a textbook or syllabus (PDF), then ask a question by voice or text to get an instant spoken response.")
 
 # Session state
