@@ -13,6 +13,7 @@ from pydub import AudioSegment
 from datetime import datetime
 import streamlit.components.v1 as components
 import base64
+import uuid
 
 # Load Cohere API key
 cohere_api_key = st.secrets["cohere_api_key"]
@@ -82,6 +83,10 @@ st.markdown("""
         padding: 20px;
         font-size: 1rem;
     }
+    .audio-controls {
+        width: 100%;
+        margin-top: 8px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -94,6 +99,21 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "document_processed" not in st.session_state:
     st.session_state.document_processed = False
+    
+# Function to generate speech audio for a message
+def generate_audio(text, message_id):
+    try:
+        tts = gTTS(text=text, lang='en')
+        audio_path = os.path.join(tempfile.gettempdir(), f"response_{message_id}.mp3")
+        tts.save(audio_path)
+        with open(audio_path, "rb") as audio_file:
+            audio_bytes = audio_file.read()
+            audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
+        os.remove(audio_path)
+        return audio_base64
+    except Exception as e:
+        st.error(f"Audio generation error: {str(e)}")
+        return None
 
 # Upload section (Collapsing section)
 with st.expander("📄 Upload Learning Materials"):
@@ -153,7 +173,12 @@ with st.expander("💬 Ask Your Question"):
             with sr.AudioFile(wav_path) as source:
                 audio_data = recognizer.record(source)
             query = recognizer.recognize_google(audio_data)
-            st.session_state.chat_history.append({"type": "user", "content": query, "timestamp": datetime.now().strftime("%H:%M")})
+            st.session_state.chat_history.append({
+                "type": "user", 
+                "content": query, 
+                "timestamp": datetime.now().strftime("%H:%M"),
+                "id": str(uuid.uuid4())
+            })
             os.remove(webm_path)
             os.remove(wav_path)
             os.rmdir(temp_dir)
@@ -166,33 +191,45 @@ with st.expander("💬 Ask Your Question"):
 # Answering
 if query and st.session_state.document_processed:
     if not any(m['content'] == query for m in st.session_state.chat_history if m['type'] == 'user'):
-        st.session_state.chat_history.append({"type": "user", "content": query, "timestamp": datetime.now().strftime("%H:%M")})
+        st.session_state.chat_history.append({
+            "type": "user", 
+            "content": query, 
+            "timestamp": datetime.now().strftime("%H:%M"),
+            "id": str(uuid.uuid4())
+        })
     with st.spinner("Answering your question..."):
         try:
             docs = docsearch.similarity_search(query)
             result = chain.invoke({"input_documents": docs, "question": query})
             answer = result.get("output_text", "I couldn't find a good answer.")
-            st.session_state.chat_history.append({"type": "bot", "content": answer, "timestamp": datetime.now().strftime("%H:%M")})
-
-            tts = gTTS(text=answer, lang='en')
-            audio_path = os.path.join(tempfile.gettempdir(), "response.mp3")
-            tts.save(audio_path)
-            with open(audio_path, "rb") as audio_file:
-                audio_bytes = audio_file.read()
-                audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
-                audio_html = f"""
-                    <audio id="responseAudio" autoplay controls style="width: 100%;">
-                        <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
-                        Your browser does not support the audio element.
-                    </audio>
-                    <script>
-                        var audioElement = document.getElementById("responseAudio");
-                        audioElement.load();  // Ensure the audio element is reset before playing.
-                        audioElement.play();  // Explicitly play the audio on each response.
-                    </script>
-                """
-                st.markdown(audio_html, unsafe_allow_html=True)
-            os.remove(audio_path)
+            
+            # Generate a unique ID for the message
+            msg_id = str(uuid.uuid4())
+            
+            # Generate audio for this response
+            audio_base64 = generate_audio(answer, msg_id)
+            
+            # Add the bot's response to chat history with audio
+            st.session_state.chat_history.append({
+                "type": "bot", 
+                "content": answer, 
+                "timestamp": datetime.now().strftime("%H:%M"),
+                "id": msg_id,
+                "audio": audio_base64
+            })
+            
+            # Auto-play the latest response
+            st.markdown(f"""
+                <audio id="latestResponseAudio" autoplay controls style="width: 100%;">
+                    <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
+                    Your browser does not support the audio element.
+                </audio>
+                <script>
+                    var audioElement = document.getElementById("latestResponseAudio");
+                    audioElement.play();
+                </script>
+            """, unsafe_allow_html=True)
+            
         except Exception as e:
             st.error(f"Response error: {str(e)}")
 
@@ -203,10 +240,24 @@ if not st.session_state.chat_history:
 else:
     for msg in reversed(st.session_state.chat_history):
         bubble_class = "user-bubble" if msg['type'] == 'user' else "bot-bubble"
+        audio_player = ""
+        
+        # Add audio player for bot messages if audio exists
+        if msg['type'] == 'bot' and 'audio' in msg:
+            audio_player = f"""
+            <div class="audio-controls">
+                <audio controls>
+                    <source src="data:audio/mp3;base64,{msg['audio']}" type="audio/mp3">
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
+            """
+            
         st.markdown(f"""
         <div class='chat-bubble {bubble_class}'>
             {msg['content']}
             <div class='timestamp'>{msg['timestamp']}</div>
+            {audio_player}
         </div>
         """, unsafe_allow_html=True)
 
