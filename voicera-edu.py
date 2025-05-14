@@ -177,26 +177,38 @@ if query and st.session_state.document_processed:
             answer = result.get("output_text", "I couldn't find a good answer.")
             st.session_state.chat_history.append({"type": "bot", "content": answer, "timestamp": datetime.now().strftime("%H:%M")})
 
-            # Generate unique filename for each response
-            response_id = str(uuid.uuid4())
+            # Generate a unique filename based on the timestamp
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
+            audio_filename = f"response_{timestamp}.mp3"
+            audio_path = os.path.join(tempfile.gettempdir(), audio_filename)
+
+            # Convert the answer to audio and save it
             tts = gTTS(text=answer, lang='en')
-            
-            # Create temp directory for this response
-            temp_dir = tempfile.mkdtemp()
-            audio_path = os.path.join(temp_dir, f"response_{response_id}.mp3")
             tts.save(audio_path)
-            
-            # Store audio in session state
+
+            # Save the audio file path in session state to keep track of all responses
+            if "audio_files" not in st.session_state:
+                st.session_state.audio_files = []
+            st.session_state.audio_files.append(audio_path)
+
+            # Generate the audio player HTML with the unique file
             with open(audio_path, "rb") as audio_file:
-                st.session_state.audio_responses[response_id] = audio_file.read()
-            
-            # Display audio player
-            st.audio(st.session_state.audio_responses[response_id], format="audio/mp3")
-            
-            # Clean up
-            os.remove(audio_path)
-            os.rmdir(temp_dir)
-            
+                audio_bytes = audio_file.read()
+                audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
+                audio_html = f"""
+                    <audio id="responseAudio_{timestamp}" controls style="width: 100%;">
+                        <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
+                        Your browser does not support the audio element.
+                    </audio>
+                    <script>
+                        var audioElement = document.getElementById("responseAudio_{timestamp}");
+                        audioElement.load();  // Ensure the audio element is reset before playing.
+                        audioElement.play();  // Explicitly play the audio on each response.
+                    </script>
+                """
+                st.markdown(audio_html, unsafe_allow_html=True)
+            os.remove(audio_path)  # Clean up the audio file after it has been played
+
         except Exception as e:
             st.error(f"Response error: {str(e)}")
 
