@@ -13,6 +13,7 @@ from pydub import AudioSegment
 from datetime import datetime
 import streamlit.components.v1 as components
 import base64
+import uuid
 
 # Load Cohere API key
 cohere_api_key = st.secrets["cohere_api_key"]
@@ -94,6 +95,8 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "document_processed" not in st.session_state:
     st.session_state.document_processed = False
+if "audio_responses" not in st.session_state:
+    st.session_state.audio_responses = {}
 
 # Upload section (Collapsing section)
 with st.expander("📄 Upload Learning Materials"):
@@ -174,25 +177,26 @@ if query and st.session_state.document_processed:
             answer = result.get("output_text", "I couldn't find a good answer.")
             st.session_state.chat_history.append({"type": "bot", "content": answer, "timestamp": datetime.now().strftime("%H:%M")})
 
+            # Generate unique filename for each response
+            response_id = str(uuid.uuid4())
             tts = gTTS(text=answer, lang='en')
-            audio_path = os.path.join(tempfile.gettempdir(), "response.mp3")
+            
+            # Create temp directory for this response
+            temp_dir = tempfile.mkdtemp()
+            audio_path = os.path.join(temp_dir, f"response_{response_id}.mp3")
             tts.save(audio_path)
+            
+            # Store audio in session state
             with open(audio_path, "rb") as audio_file:
-                audio_bytes = audio_file.read()
-                audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
-                audio_html = f"""
-                    <audio id="responseAudio" autoplay controls style="width: 100%;">
-                        <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
-                        Your browser does not support the audio element.
-                    </audio>
-                    <script>
-                        var audioElement = document.getElementById("responseAudio");
-                        audioElement.load();  // Ensure the audio element is reset before playing.
-                        audioElement.play();  // Explicitly play the audio on each response.
-                    </script>
-                """
-                st.markdown(audio_html, unsafe_allow_html=True)
+                st.session_state.audio_responses[response_id] = audio_file.read()
+            
+            # Display audio player
+            st.audio(st.session_state.audio_responses[response_id], format="audio/mp3")
+            
+            # Clean up
             os.remove(audio_path)
+            os.rmdir(temp_dir)
+            
         except Exception as e:
             st.error(f"Response error: {str(e)}")
 
