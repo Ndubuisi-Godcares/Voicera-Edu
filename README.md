@@ -1,6 +1,6 @@
 # Voicera 🎙️ – AI-Powered Conversational Assistant for Educational Content
 
-**Voicera** is a production-grade conversational AI assistant designed for educational purposes. It enables voice and text-based interaction with syllabus content by combining speech recognition, LLM-powered document Q&A, and voice synthesis into a seamless experience.
+**Voicera** is a production-grade conversational AI assistant designed for educational purposes. It enables voice and text-based interaction with syllabus content by combining speech recognition, LLM-powered document Q&A(Cohere), and voice synthesis into a seamless experience.
 
 ---
 
@@ -17,21 +17,41 @@
 ## 🧩 System Architecture
 
 ```text
- ┌────────────┐
- │  PDF Input │◄── Upload syllabus or textbook
- └────┬───────┘
-      ▼
-┌──────────────┐
-│ PDF Chunking │──► FAISS Vector DB ───► LangChain QA Chain
-└────┬─────────┘                          │
-     ▼                                   ▼
-┌──────────────┐                  ┌──────────────┐
-│ User Query   │◄── Voice/Text ──►│  LLM (Cohere)│
-└────┬─────────┘                  └──────────────┘
-     ▼                                   │
-┌──────────────┐                         ▼
-│ Answer in UI │◄── gTTS ── Spoken Response
-└──────────────┘
+
+                            ┌─────────────────────┐
+                            │   PDF Upload (UI)   │  ← User uploads educational PDF (e.g., textbook, syllabus)
+                            └────────┬────────────┘
+                                     ▼
+                            ┌─────────────────────┐
+                            │   PDF Text Extract  │  ← Extracts raw text content from the uploaded PDF using PyPDF2
+                            └────────┬────────────┘
+                                     ▼
+                         ┌────────────────────────────┐
+                         │  Text Chunking & Embedding │  ← Splits the extracted text into chunks & embeds using Cohere
+                         │ (LangChain + Cohere)       │
+                         └────────┬──────────────┬─────┘
+                                  ▼              ▼
+                       ┌────────────────┐  ┌────────────────────┐
+                       │   FAISS Store  │  │  Cohere LLM (QA)   │  ← FAISS stores document embeddings; Cohere handles QA
+                       └──────┬─────────┘  └──────────┬─────────┘
+                              ▼                       ▼
+                      ┌─────────────┐        ┌────────────────────┐
+Voice/Text Input ────►│ User Query  │───────►│ Similarity Search   │  ← User submits query (text/voice); search for relevant docs
+                      └────┬────────┘        └────────┬───────────┘
+                           ▼                          ▼
+                   ┌────────────────────┐     ┌────────────────────┐
+                   │ Chat History State │◄────┤ LangChain QA Chain │  ← Chat history tracked; LangChain links QA processing
+                   └────────┬───────────┘     └────────┬───────────┘
+                            ▼                          ▼
+            ┌──────────────────────────┐     ┌────────────────────┐
+            │ Chat Display in Streamlit│     │ gTTS (Spoken Reply)│  ← Display chat history; convert text answer to speech
+            └────────┬─────────────────┘     └────────┬───────────┘
+                     ▼                                ▼
+            ┌────────────────────┐          ┌────────────────────┐
+            │ Chat Summary (UI) │          │ Audio Playback (UI)│  ← Summarize chat; Playback generated spoken response
+            └────────────────────┘          └────────────────────┘
+
+
 ```
 
 ## 📁 Project Structure
