@@ -181,10 +181,14 @@ if query and st.session_state.document_processed:
                 audio_bytes = audio_file.read()
                 audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
                 audio_html = f"""
-                    <audio autoplay controls style="width: 100%;">
+                    <audio id="responseAudio" autoplay controls style="width: 100%;">
                         <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
                         Your browser does not support the audio element.
                     </audio>
+                    <script>
+                        var audioElement = document.getElementById("responseAudio");
+                        audioElement.play();  // Explicitly play the audio on each response
+                    </script>
                 """
                 st.markdown(audio_html, unsafe_allow_html=True)
             os.remove(audio_path)
