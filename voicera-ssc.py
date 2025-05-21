@@ -122,9 +122,6 @@ with st.sidebar:
         st.write("**Files:**")
         for f in pdf_files:
             st.write(f"- {f}")
-        st.markdown("**Content Preview:**")
-        st.markdown(f'<div class="document-content">{doc_text[:3000]}</div>', unsafe_allow_html=True)
-        st.download_button("📅 Download Combined Text", doc_text, "combined_content.txt")
     else:
         st.info("Add PDFs to `pdf_docs/` folder to enable features.")
 
