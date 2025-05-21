@@ -57,8 +57,8 @@ Voice/Text Input ────►│ User Query  │───────►│ S
 ## 📁 Project Structure
 ```
 voicera-ai/
-├── voicera-edu.py                  # Main Streamlit application (Upload and query any pdf file)
-├── voicera-ssc.py                 # Application is developed with preloaded syllabus(Query the syllabus) 
+├── voicera-edu.py          # Main Streamlit application (Upload and query any pdf file)
+├── voicera-ssc.py          # Application is developed with preloaded syllabus(Query the syllabus) 
 ├── requirements.txt        # Python dependencies
 ├── .streamlit/
 │   └── secrets.toml        # Secure API key storage
@@ -71,6 +71,7 @@ cohere_api_key = "your-cohere-api-key"
 ```
 Replace "your-cohere-api-key" with your actual API key from Cohere.
 Please not: The API is rate-limited and shouldn't be used for commercial purposes. Large document sizes can exceed the rate limit of 10,0000 tokens per minute.
+
 ---
 
 ## 🧰 Tech Stack
