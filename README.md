@@ -70,7 +70,8 @@ voicera-ai/
 cohere_api_key = "your-cohere-api-key"
 ```
 Replace "your-cohere-api-key" with your actual API key from Cohere.
-Please not: The API is rate-limited and shouldn't be used for commercial purposes. Large document sizes can exceed the rate limit of 10,0000 tokens per minute.
+
+Please not: The API is rate-limited. Large document sizes can exceed the rate limit of 10,0000 tokens per minute.
 
 ---
 
