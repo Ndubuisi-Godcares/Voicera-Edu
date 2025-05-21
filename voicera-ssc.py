@@ -19,7 +19,7 @@ cohere_api_key = st.secrets["cohere_api_key"]
 
 # Page config
 st.set_page_config(
-    page_title="Voicera - Conversational AI for Education",
+    page_title="SmartSyllabus - Conversational AI for Education",
     page_icon="🤖",
     layout="centered"
 )
