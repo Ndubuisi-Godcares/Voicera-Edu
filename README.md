@@ -1,6 +1,6 @@
 # Voicera 🎙️ – AI-Powered Conversational Assistant for Educational Content
 
-**Voicera** is a production-grade conversational AI assistant designed for educational purposes. It enables voice and text-based interaction with syllabus content by combining speech recognition, LLM-powered document Q&A(Cohere), and voice synthesis into a seamless experience.
+**Voicera** is a production-grade conversational AI assistant designed for educational purposes. It enables voice and text-based interaction with syllabus content by combining speech recognition, LLM-powered document Q&A(Cohere), and voice synthesis into a seamless experience. There are two applications of Voicera: a syllabic assistant(preloaded syllabus) and a universal assistant assistant(upload any pdf).
 
 ---
 
@@ -57,7 +57,8 @@ Voice/Text Input ────►│ User Query  │───────►│ S
 ## 📁 Project Structure
 ```
 voicera-ai/
-├── app.py                  # Main Streamlit application
+├── voicera-edu.py                  # Main Streamlit application (Upload and query any pdf file)
+├── voicera-ssc.py                 # Application is developed with preloaded syllabus(Query the syllabus) 
 ├── requirements.txt        # Python dependencies
 ├── .streamlit/
 │   └── secrets.toml        # Secure API key storage
@@ -69,7 +70,7 @@ voicera-ai/
 cohere_api_key = "your-cohere-api-key"
 ```
 Replace "your-cohere-api-key" with your actual API key from Cohere.
-
+Please not: The API is rate-limited and shouldn't be used for commercial purposes. Large document sizes can exceed the rate limit of 10,0000 tokens per minute.
 ---
 
 ## 🧰 Tech Stack
