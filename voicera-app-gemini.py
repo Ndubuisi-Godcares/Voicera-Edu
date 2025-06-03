@@ -95,7 +95,7 @@ def process_document(file_bytes):
     file_stream = BytesIO(file_bytes)  # Wrap bytes in BytesIO for PdfReader
     reader = PdfReader(file_stream)
     doc_text = ""
-    max_pages = 20  # Optional: limit number of pages to process
+    max_pages = 20
     for i, page in enumerate(reader.pages):
         if i >= max_pages:
             break
@@ -106,10 +106,14 @@ def process_document(file_bytes):
     splitter = CharacterTextSplitter(separator="\n", chunk_size=1000, chunk_overlap=200)
     texts = splitter.split_text(doc_text)
 
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(
+        model="models/embedding-001",
+        google_api_key=st.secrets["gemini_api_key"]
+    )
     docsearch = FAISS.from_texts(texts, embeddings)
 
     return doc_text, texts, docsearch
+
 
 
 # App Header
