@@ -10,3 +10,4 @@ cohere
 pydub
 ffmpeg-python
 scikit-learn
+google-generativeai
