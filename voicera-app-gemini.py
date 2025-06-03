@@ -90,7 +90,7 @@ st.markdown("""
 
 
 # Cache the document processing to avoid repeated long API calls
-@st.cache_data(show_spinner="Processing document, please wait...")
+@st.cache_resource(show_spinner="Processing document, please wait...")
 def process_document(file_bytes):
     file_stream = BytesIO(file_bytes)  # Wrap bytes in BytesIO for PdfReader
     reader = PdfReader(file_stream)
