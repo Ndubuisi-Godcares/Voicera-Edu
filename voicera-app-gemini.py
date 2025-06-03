@@ -6,16 +6,14 @@ from gtts import gTTS
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain.chains.question_answering import load_qa_chain
 from pydub import AudioSegment
 from datetime import datetime
-import streamlit.components.v1 as components
 import base64
 import uuid
 import google.generativeai as genai
-from io import BytesIO  # <-- Added this import
+from io import BytesIO
 
 # Load Gemini API key
 genai.configure(api_key=st.secrets["gemini_api_key"])
@@ -88,12 +86,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
-# Cache the document processing to avoid repeated long API calls
+# Cache document processing
 @st.cache_resource(show_spinner="Processing document, please wait...")
 def process_document(file_bytes):
-    file_stream = BytesIO(file_bytes)  # Wrap bytes in BytesIO for PdfReader
-    reader = PdfReader(file_stream)
+    reader = PdfReader(BytesIO(file_bytes))
     doc_text = ""
     max_pages = 20
     for i, page in enumerate(reader.pages):
@@ -114,13 +110,11 @@ def process_document(file_bytes):
 
     return doc_text, texts, docsearch
 
-
-
 # App Header
 st.title("🤖 Voicera - Conversational AI for Education")
 st.caption("Upload a textbook or syllabus (PDF), then ask a question by voice or text to get an instant spoken response.")
 
-# Session state initialization
+# Session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "document_processed" not in st.session_state:
@@ -128,11 +122,11 @@ if "document_processed" not in st.session_state:
 if "audio_responses" not in st.session_state:
     st.session_state.audio_responses = {}
 
-# Upload section
+# Upload
 with st.expander("📄 Upload Learning Materials"):
     uploaded_file = st.file_uploader("Choose a PDF file", type=["pdf"])
 
-# Document processing
+# Process uploaded file
 if uploaded_file:
     file_bytes = uploaded_file.read()
     with st.spinner("Processing document..."):
@@ -143,11 +137,9 @@ if uploaded_file:
         except Exception as e:
             st.error(f"Failed to process: {str(e)}")
 else:
-    doc_text = ""
-    texts = []
-    docsearch = None
+    doc_text, texts, docsearch = "", [], None
 
-# Sidebar document tools
+# Sidebar tools
 with st.sidebar:
     st.header("📁 Document Tools")
     if uploaded_file and st.session_state.document_processed:
@@ -160,7 +152,7 @@ with st.sidebar:
     else:
         st.info("Upload a document to enable tools")
 
-# Input (Ask questions)
+# Ask Question
 with st.expander("💬 Ask Your Question"):
     query = ""
 
@@ -170,29 +162,35 @@ with st.expander("💬 Ask Your Question"):
         try:
             temp_dir = tempfile.mkdtemp()
             webm_path = os.path.join(temp_dir, "input.webm")
+            wav_path = os.path.join(temp_dir, "input.wav")
             with open(webm_path, "wb") as f:
                 f.write(audio_bytes.getvalue())
             audio = AudioSegment.from_file(webm_path)
-            wav_path = os.path.join(temp_dir, "input.wav")
             audio.export(wav_path, format="wav")
             recognizer = sr.Recognizer()
             with sr.AudioFile(wav_path) as source:
                 audio_data = recognizer.record(source)
             query = recognizer.recognize_google(audio_data)
-            st.session_state.chat_history.append({"type": "user", "content": query, "timestamp": datetime.now().strftime("%H:%M")})
+            st.session_state.chat_history.append({
+                "type": "user", "content": query,
+                "timestamp": datetime.now().strftime("%H:%M")
+            })
             os.remove(webm_path)
             os.remove(wav_path)
             os.rmdir(temp_dir)
         except Exception as e:
             st.error(f"Speech recognition failed: {str(e)}")
 
-    # Text input (will overwrite voice if used)
+    # Text fallback input
     query = st.text_input("Or type your question:", value=query)
 
-# Answering logic
+# Answer the query
 if query and st.session_state.document_processed:
     if not any(m['content'] == query for m in st.session_state.chat_history if m['type'] == 'user'):
-        st.session_state.chat_history.append({"type": "user", "content": query, "timestamp": datetime.now().strftime("%H:%M")})
+        st.session_state.chat_history.append({
+            "type": "user", "content": query,
+            "timestamp": datetime.now().strftime("%H:%M")
+        })
     with st.spinner("Answering your question..."):
         try:
             llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
@@ -200,12 +198,14 @@ if query and st.session_state.document_processed:
             docs = docsearch.similarity_search(query)
             result = chain.invoke({"input_documents": docs, "question": query})
             answer = result.get("output_text", "I couldn't find a good answer.")
-            st.session_state.chat_history.append({"type": "bot", "content": answer, "timestamp": datetime.now().strftime("%H:%M")})
+            st.session_state.chat_history.append({
+                "type": "bot", "content": answer,
+                "timestamp": datetime.now().strftime("%H:%M")
+            })
 
-            # Generate TTS audio response
+            # TTS audio generation
             response_id = str(uuid.uuid4())
             tts = gTTS(text=answer, lang='en')
-
             temp_dir = tempfile.mkdtemp()
             audio_path = os.path.join(temp_dir, f"response_{response_id}.mp3")
             tts.save(audio_path)
@@ -221,7 +221,7 @@ if query and st.session_state.document_processed:
         except Exception as e:
             st.error(f"Response error: {str(e)}")
 
-# Display chat history
+# Chat History
 st.subheader("📜 Chat History")
 if not st.session_state.chat_history:
     st.info("Your conversation will appear here.")
@@ -235,11 +235,9 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-# Chat summary popup
+# Summary popup
 def generate_summary(history):
-    if not history:
-        return "No conversation yet."
-    return "\n".join(f"{'User' if h['type'] == 'user' else 'Bot'} ({h['timestamp']}): {h['content']}" for h in history)
+    return "\n".join(f"{'User' if h['type'] == 'user' else 'Bot'} ({h['timestamp']}): {h['content']}" for h in history) or "No conversation yet."
 
 if st.button("📌 Summarize Chat"):
     summary = generate_summary(st.session_state.chat_history)
