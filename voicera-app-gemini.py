@@ -87,11 +87,34 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+
+# Cache the document processing to avoid repeated long API calls
+@st.cache_data(show_spinner="Processing document, please wait...")
+def process_document(file_bytes):
+    reader = PdfReader(file_bytes)
+    doc_text = ""
+    max_pages = 20  # Optional: limit number of pages to process
+    for i, page in enumerate(reader.pages):
+        if i >= max_pages:
+            break
+        text = page.extract_text()
+        if text:
+            doc_text += text.strip() + "\n"
+
+    splitter = CharacterTextSplitter(separator="\n", chunk_size=1000, chunk_overlap=200)
+    texts = splitter.split_text(doc_text)
+
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    docsearch = FAISS.from_texts(texts, embeddings)
+
+    return doc_text, texts, docsearch
+
+
 # App Header
 st.title("🤖 Voicera - Conversational AI for Education")
 st.caption("Upload a textbook or syllabus (PDF), then ask a question by voice or text to get an instant spoken response.")
 
-# Session state
+# Session state initialization
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "document_processed" not in st.session_state:
@@ -99,46 +122,39 @@ if "document_processed" not in st.session_state:
 if "audio_responses" not in st.session_state:
     st.session_state.audio_responses = {}
 
-# Upload section (Collapsing section)
+# Upload section
 with st.expander("📄 Upload Learning Materials"):
     uploaded_file = st.file_uploader("Choose a PDF file", type=["pdf"])
 
 # Document processing
 if uploaded_file:
+    file_bytes = uploaded_file.read()
     with st.spinner("Processing document..."):
         try:
-            doc_text = ""
-            reader = PdfReader(uploaded_file)
-            for page in reader.pages:
-                text = page.extract_text()
-                if text:
-                    doc_text += text.strip() + "\n"
-
-            splitter = CharacterTextSplitter(separator="\n", chunk_size=1000, chunk_overlap=200)
-            texts = splitter.split_text(doc_text)
-            embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-            docsearch = FAISS.from_texts(texts, embeddings)
-            llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
-            chain = load_qa_chain(llm, chain_type="stuff")
+            doc_text, texts, docsearch = process_document(file_bytes)
             st.session_state.document_processed = True
             st.success(f"Document processed ({len(texts)} sections)")
         except Exception as e:
             st.error(f"Failed to process: {str(e)}")
+else:
+    doc_text = ""
+    texts = []
+    docsearch = None
 
-# Sidebar document tools (Card layout)
+# Sidebar document tools
 with st.sidebar:
     st.header("📁 Document Tools")
-    if uploaded_file:
+    if uploaded_file and st.session_state.document_processed:
         st.write(f"**Name:** {uploaded_file.name}")
-        st.write(f"**Size:** {uploaded_file.size/1024:.1f} KB")
-        st.write(f"**Sections:** {len(texts) if 'texts' in locals() else 0}")
+        st.write(f"**Size:** {uploaded_file.size / 1024:.1f} KB")
+        st.write(f"**Sections:** {len(texts)}")
         st.markdown("**Content Preview:**")
         st.markdown(f'<div class="document-content">{doc_text}</div>', unsafe_allow_html=True)
         st.download_button("📅 Download Text", doc_text, f"{uploaded_file.name}_content.txt")
     else:
         st.info("Upload a document to enable tools")
 
-# Input (Collapsing section)
+# Input (Ask questions)
 with st.expander("💬 Ask Your Question"):
     query = ""
 
@@ -164,44 +180,42 @@ with st.expander("💬 Ask Your Question"):
         except Exception as e:
             st.error(f"Speech recognition failed: {str(e)}")
 
-    # Text input
+    # Text input (will overwrite voice if used)
     query = st.text_input("Or type your question:", value=query)
 
-# Answering
+# Answering logic
 if query and st.session_state.document_processed:
     if not any(m['content'] == query for m in st.session_state.chat_history if m['type'] == 'user'):
         st.session_state.chat_history.append({"type": "user", "content": query, "timestamp": datetime.now().strftime("%H:%M")})
     with st.spinner("Answering your question..."):
         try:
+            llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
+            chain = load_qa_chain(llm, chain_type="stuff")
             docs = docsearch.similarity_search(query)
             result = chain.invoke({"input_documents": docs, "question": query})
             answer = result.get("output_text", "I couldn't find a good answer.")
             st.session_state.chat_history.append({"type": "bot", "content": answer, "timestamp": datetime.now().strftime("%H:%M")})
 
-            # Generate unique filename for each response
+            # Generate TTS audio response
             response_id = str(uuid.uuid4())
             tts = gTTS(text=answer, lang='en')
 
-            # Create temp directory for this response
             temp_dir = tempfile.mkdtemp()
             audio_path = os.path.join(temp_dir, f"response_{response_id}.mp3")
             tts.save(audio_path)
 
-            # Store audio in session state
             with open(audio_path, "rb") as audio_file:
                 st.session_state.audio_responses[response_id] = audio_file.read()
 
-            # Display audio player
             st.audio(st.session_state.audio_responses[response_id], format="audio/mp3")
 
-            # Clean up
             os.remove(audio_path)
             os.rmdir(temp_dir)
 
         except Exception as e:
             st.error(f"Response error: {str(e)}")
 
-# Chat display
+# Display chat history
 st.subheader("📜 Chat History")
 if not st.session_state.chat_history:
     st.info("Your conversation will appear here.")
@@ -215,7 +229,7 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-# Chat summary
+# Chat summary popup
 def generate_summary(history):
     if not history:
         return "No conversation yet."
@@ -223,10 +237,5 @@ def generate_summary(history):
 
 if st.button("📌 Summarize Chat"):
     summary = generate_summary(st.session_state.chat_history)
-    components.html(f"""
-    <div style='position:fixed;bottom:20px;right:20px;width:350px;max-height:300px;background:#fff;padding:1rem;border:1px solid #ccc;border-radius:12px;overflow:auto;z-index:9999;'>
-        <h4>🧠 Chat Summary</h4>
-        <pre style='white-space: pre-wrap;font-size:13px;'>{summary}</pre>
-        <button onclick=\"this.parentElement.style.display='none'\" style='margin-top:10px;background:#4f46e5;color:#fff;border:none;padding:0.5rem 1rem;border-radius:6px;'>Close</button>
-    </div>
-    """, height=400)
+    st.text_area("Chat Summary:", summary, height=300)
+
