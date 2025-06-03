@@ -257,8 +257,12 @@ with st.expander("💬 Ask Your Question", expanded=st.session_state.document_pr
         text_query = st.text_input("💬 Or type your question:", value=query if query else "")
         final_query = text_query if text_query else query
 
+# Add a processing flag to prevent infinite loops
+if "processing_query" not in st.session_state:
+    st.session_state.processing_query = False
+
 # Process and answer the query
-if final_query and st.session_state.document_processed and st.session_state.docsearch:
+if final_query and st.session_state.document_processed and st.session_state.docsearch and not st.session_state.processing_query:
     # Check if this is a new query
     last_user_msg = None
     if st.session_state.chat_history:
@@ -268,6 +272,8 @@ if final_query and st.session_state.document_processed and st.session_state.docs
                 break
     
     if final_query != last_user_msg:
+        st.session_state.processing_query = True
+        
         # Add user message to chat
         st.session_state.chat_history.append({
             "type": "user", 
@@ -304,9 +310,8 @@ if final_query and st.session_state.document_processed and st.session_state.docs
                 with open(audio_path, "rb") as audio_file:
                     st.session_state.audio_responses[response_id] = audio_file.read()
 
-                # Play audio
-                st.audio(st.session_state.audio_responses[response_id], format="audio/mp3")
-                st.rerun()
+                # Display success message
+                st.success("✅ Response generated! Check the chat history below.")
 
             except Exception as e:
                 st.error(f"Error generating response: {str(e)}")
@@ -317,6 +322,7 @@ if final_query and st.session_state.document_processed and st.session_state.docs
                 })
             finally:
                 cleanup_temp_files(audio_path, temp_dir)
+                st.session_state.processing_query = False
 
 # Chat History Display
 st.subheader("💬 Chat History")
@@ -324,7 +330,7 @@ if not st.session_state.chat_history:
     st.info("Your conversation will appear here after you ask a question.")
 else:
     # Display messages in chronological order (most recent at bottom)
-    for msg in st.session_state.chat_history:
+    for i, msg in enumerate(st.session_state.chat_history):
         bubble_class = "user-bubble" if msg['type'] == 'user' else "bot-bubble"
         icon = "👤" if msg['type'] == 'user' else "🤖"
         st.markdown(f"""
@@ -333,6 +339,12 @@ else:
             <div class='timestamp'>{msg['timestamp']}</div>
         </div>
         """, unsafe_allow_html=True)
+        
+        # Show audio player for the most recent bot response
+        if (msg['type'] == 'bot' and i == len(st.session_state.chat_history) - 1 
+            and st.session_state.audio_responses):
+            latest_audio = list(st.session_state.audio_responses.values())[-1]
+            st.audio(latest_audio, format="audio/mp3")
 
 # Chat management buttons
 col1, col2 = st.columns(2)
