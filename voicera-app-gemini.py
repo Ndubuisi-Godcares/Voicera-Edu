@@ -211,13 +211,15 @@ with st.sidebar:
     else:
         st.info("Upload a document to enable tools")
 
+# Initialize query variables outside the expander
+query = ""
+final_query = ""
+
 # Question input section
 with st.expander("💬 Ask Your Question", expanded=st.session_state.document_processed):
     if not st.session_state.document_processed:
         st.warning("Please upload and process a document first!")
     else:
-        query = ""
-        
         # Voice input
         audio_bytes = st.audio_input("🎤 Speak your question:")
         if audio_bytes:
