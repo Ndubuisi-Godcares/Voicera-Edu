@@ -15,6 +15,7 @@ import streamlit.components.v1 as components
 import base64
 import uuid
 import google.generativeai as genai
+from io import BytesIO  # <-- Added this import
 
 # Load Gemini API key
 genai.configure(api_key=st.secrets["gemini_api_key"])
@@ -91,7 +92,8 @@ st.markdown("""
 # Cache the document processing to avoid repeated long API calls
 @st.cache_data(show_spinner="Processing document, please wait...")
 def process_document(file_bytes):
-    reader = PdfReader(file_bytes)
+    file_stream = BytesIO(file_bytes)  # Wrap bytes in BytesIO for PdfReader
+    reader = PdfReader(file_stream)
     doc_text = ""
     max_pages = 20  # Optional: limit number of pages to process
     for i, page in enumerate(reader.pages):
@@ -238,4 +240,3 @@ def generate_summary(history):
 if st.button("📌 Summarize Chat"):
     summary = generate_summary(st.session_state.chat_history)
     st.text_area("Chat Summary:", summary, height=300)
-
