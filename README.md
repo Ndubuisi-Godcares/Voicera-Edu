@@ -1,70 +1,53 @@
-# Voicera 🎙️ – AI-Powered Conversational Assistant for Educational Content
+# Voicera: Conversational AI for Education
 
-**Voicera** is a production-grade conversational AI assistant designed for educational purposes. It enables voice and text-based interaction with syllabus content by combining speech recognition, LLM-powered document Q&A(Cohere), and voice synthesis into a seamless experience. There are two applications of Voicera: a syllabic assistant(preloaded syllabus) and a universal assistant assistant(upload any pdf).
+**Voicera** is a production-grade AI assistant designed for educational environments. It combines automatic speech recognition (ASR), Retrieval-Augmented Generation (RAG), and text-to-speech (TTS) to facilitate multimodal interaction with academic content.
 
----
-
-## 🧠 Key Features
-
-- 🎤 **Multimodal Interaction**: Ask questions via voice or text.
-- 📚 **PDF Parsing & Chunking**: Automatically extracts and processes academic documents.
-- 🔍 **Contextual Q&A**: Answers user queries using Cohere’s LLM with context from your syllabus.
-- 🔈 **Voice Output**: Converts AI responses into speech using Google Text-to-Speech (gTTS).
-- 📄 **Conversation Summary**: Generates summaries of user interaction history.
+The platform operates in two configurations:
+* **Syllabic Assistant:** Optimized for preloaded curricular content.
+* **Universal Assistant:** Dynamic support for user-uploaded PDF documentation.
 
 ---
 
-## 🧩 System Architecture
+## Key Capabilities
+
+* **Multimodal Interaction:** Supports seamless voice and text-based querying.
+* **Automated RAG Pipeline:** Efficient PDF parsing, semantic chunking, and vectorization.
+* **Context-Aware AI:** leverages Cohere for high-fidelity semantic search and response generation.
+* **Audio Synthesis:** Integrated gTTS engine for audible response delivery.
+
+---
+
+## System Architecture
+
+![Voicera System Architecture](https://github.com/user-attachments/assets/b24d634b-6672-452d-a22b-165b70c6000c)
+
+---
+
+## Technical Specifications
+
+### Technology Stack
+
+| Component | Technology | Role |
+| :--- | :--- | :--- |
+| **Frontend** | Streamlit | UI & Session Management |
+| **Orchestration** | LangChain | Pipeline Management |
+| **Vector Store** | FAISS | Similarity Search |
+| **LLM / Embeddings** | Cohere | Generation & Embedding Models |
+| **ASR** | SpeechRecognition | Voice-to-Text Processing |
+| **TTS** | gTTS | Text-to-Speech Synthesis |
+
+### Repository Structure
 
 ```text
-
-                            ┌─────────────────────┐
-                            │   PDF Upload (UI)   │  ← User uploads educational PDF (e.g., textbook, syllabus)
-                            └────────┬────────────┘
-                                     ▼
-                            ┌─────────────────────┐
-                            │   PDF Text Extract  │  ← Extracts raw text content from the uploaded PDF using PyPDF2
-                            └────────┬────────────┘
-                                     ▼
-                         ┌────────────────────────────┐
-                         │  Text Chunking & Embedding │  ← Splits the extracted text into chunks & embeds using Cohere
-                         │ (LangChain + Cohere)       │
-                         └────────┬──────────────┬─────┘
-                                  ▼              ▼
-                       ┌────────────────┐  ┌────────────────────┐
-                       │   FAISS Store  │  │  Cohere LLM (QA)   │  ← FAISS stores document embeddings; Cohere handles QA
-                       └──────┬─────────┘  └──────────┬─────────┘
-                              ▼                       ▼
-                      ┌─────────────┐        ┌────────────────────┐
-Voice/Text Input ────►│ User Query  │───────►│ Similarity Search   │  ← User submits query (text/voice); search for relevant docs
-                      └────┬────────┘        └────────┬───────────┘
-                           ▼                          ▼
-                   ┌────────────────────┐     ┌────────────────────┐
-                   │ Chat History State │◄────┤ LangChain QA Chain │  ← Chat history tracked; LangChain links QA processing
-                   └────────┬───────────┘     └────────┬───────────┘
-                            ▼                          ▼
-            ┌──────────────────────────┐     ┌────────────────────┐
-            │ Chat Display in Streamlit│     │ gTTS (Spoken Reply)│  ← Display chat history; convert text answer to speech
-            └────────┬─────────────────┘     └────────┬───────────┘
-                     ▼                                ▼
-            ┌────────────────────┐          ┌────────────────────┐
-            │ Chat Summary (UI) │          │ Audio Playback (UI)│  ← Summarize chat; Playback generated spoken response
-            └────────────────────┘          └────────────────────┘
-
-
-```
-
-## 📁 Project Structure
-```
 voicera-ai/
-├── voicera-edu.py          # Main Streamlit application (Upload and query any pdf file)
-├── voicera-ssc.py          # Application is developed with preloaded syllabus(Query the syllabus) 
-├── requirements.txt        # Python dependencies
+├── voicera-edu.py          # Universal Assistant (PDF Upload)
+├── voicera-ssc.py          # Syllabic Assistant (Preloaded)
+├── requirements.txt        # Dependencies
 ├── .streamlit/
-│   └── secrets.toml        # Secure API key storage
-└── README.md               # Project documentation
+│   └── secrets.toml        # API Configuration
+└── README.md               # Documentation
 ```
-### 🔐 Secrets Configuration
+### Configuration
 ```
 [general]
 cohere_api_key = "your-cohere-api-key"
@@ -74,23 +57,7 @@ Replace "your-cohere-api-key" with your actual API key from Cohere.
 Please not: The API is rate-limited. Large document sizes can exceed the rate limit of 10,0000 tokens per minute.
 
 ---
-
-## 🧰 Tech Stack
-
-| Tool/Library            | Purpose                                      |
-|-------------------------|----------------------------------------------|
-| **Streamlit**           | UI & frontend logic                          |
-| **LangChain**           | QA chain and text chunking                   |
-| **FAISS**               | Vector store for similarity search           |
-| **Cohere**              | LLM & embedding provider                     |
-| **SpeechRecognition**   | Transcribe spoken questions                  |
-| **gTTS**                | Convert responses to speech                  |
-| **PyPDF2**              | PDF parsing and text extraction              |
-| **pydub**               | Audio file conversion                        |
-
----
-
-## 📝 Installation
+## Installation
 
 ```bash
 # Clone the repository
