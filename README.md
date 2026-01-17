@@ -61,7 +61,7 @@ Please not: The API is rate-limited. Large document sizes can exceed the rate li
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/voicera-ai.git
+git clone https://github.com/Ndubuisi-Godcares/Voicera-Edu.git
 cd voicera-ai
 
 # Install dependencies
